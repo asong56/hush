@@ -1,0 +1,35 @@
+[package]
+name        = "hush"
+version     = "1.0.0-gamma"
+edition     = "2021"
+description = "Hush — silent, instant macOS cleaner"
+license     = "BlueOak-1.0.0"
+
+[[bin]]
+name = "hush"
+path = "src/main.rs"
+
+[profile.release]
+opt-level     = "z"
+lto           = true
+codegen-units = 1
+strip         = true
+panic         = "abort"
+
+[dependencies]
+clap       = { version = "4.6.1", default-features = false,
+               features = ["derive","color","help","usage","error-context"] }
+serde      = { version = "1.0.228", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.140", default-features = false, features = ["std"] }
+libc       = { version = "0.2.172", default-features = false }
+log        = { version = "0.4.29", features = ["max_level_info","release_max_level_warn"] }
+env_logger = { version = "0.11.10", default-features = false, features = ["humantime"] }
+anyhow     = { version = "1.0.102", default-features = false }
+
+[dev-dependencies]
+# Integration tests: spawn the compiled binary and check output/exit codes
+assert_cmd = "2"
+# Unit tests: create temporary files and directories
+tempfile   = "3"
+# libc needed in test builds for set_mtime_old (utimes syscall)
+libc       = "0.2"

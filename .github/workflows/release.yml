@@ -1,0 +1,250 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"          # e.g. v0.2.0
+  workflow_dispatch:       # allow manual trigger from GitHub UI
+
+env:
+  CARGO_TERM_COLOR: always
+  BINARY_NAME: hush
+
+jobs:
+  # ── 1. Build per-arch binaries ─────────────────────────────────────────────
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: aarch64-apple-darwin   # Apple Silicon
+            runner: macos-14
+          - target: x86_64-apple-darwin    # Intel
+            runner: macos-13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binary
+        run: |
+          strip target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
+
+      - name: Verify binary size (warn if > 2 MB)
+        run: |
+          SIZE=$(stat -f%z "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}")
+          echo "Binary size: $SIZE bytes"
+          if [ "$SIZE" -gt 2097152 ]; then
+            echo "::warning::Binary exceeds 2 MB ($SIZE bytes) — check opt-level/lto settings"
+          fi
+
+      - name: Upload arch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
+          retention-days: 1
+          if-no-files-found: error
+
+  # ── 2. Combine into universal binary ──────────────────────────────────────
+  universal:
+    name: Universal Binary (lipo)
+    needs: build
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-aarch64-apple-darwin
+          path: bins/arm64/
+
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-x86_64-apple-darwin
+          path: bins/x86_64/
+
+      - name: lipo — create universal binary
+        run: |
+          chmod +x bins/arm64/${{ env.BINARY_NAME }}
+          chmod +x bins/x86_64/${{ env.BINARY_NAME }}
+          mkdir -p dist
+          lipo -create -output dist/${{ env.BINARY_NAME }} \
+            bins/arm64/${{ env.BINARY_NAME }} \
+            bins/x86_64/${{ env.BINARY_NAME }}
+          lipo -info dist/${{ env.BINARY_NAME }}
+
+      - name: Verify universal binary
+        run: |
+          file dist/${{ env.BINARY_NAME }}
+          # Must contain both architectures
+          lipo -info dist/${{ env.BINARY_NAME }} | grep -q "x86_64" || (echo "Missing x86_64" && exit 1)
+          lipo -info dist/${{ env.BINARY_NAME }} | grep -q "arm64"  || (echo "Missing arm64"  && exit 1)
+
+      # ── optional: code-sign (set secrets in repo settings) ────────────────
+      - name: Import signing certificate
+        if: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12 != '' }}
+        env:
+          P12_DATA: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12 }}
+          P12_PASS: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          echo "$P12_DATA" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security create-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 3600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN_PATH
+          security import $RUNNER_TEMP/cert.p12 \
+            -k $KEYCHAIN_PATH -P "$P12_PASS" -T /usr/bin/codesign
+          security list-keychains -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list \
+            -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" $KEYCHAIN_PATH
+
+      - name: Sign binary
+        if: ${{ secrets.APPLE_DEVELOPER_ID != '' }}
+        env:
+          DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        run: |
+          codesign --force --options runtime \
+            --sign "$DEVELOPER_ID" \
+            dist/${{ env.BINARY_NAME }}
+          codesign --verify --verbose dist/${{ env.BINARY_NAME }}
+
+      - name: Notarize binary
+        env:
+          AC_USERNAME: ${{ secrets.APPLE_NOTARIZE_USERNAME }}
+          AC_PASSWORD:  ${{ secrets.APPLE_NOTARIZE_APP_PASSWORD }}
+          AC_TEAM_ID:   ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$AC_USERNAME" ]; then
+            echo "::error::Notarization is required for release. Set APPLE_NOTARIZE_USERNAME, APPLE_NOTARIZE_APP_PASSWORD, and APPLE_TEAM_ID secrets."
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc dist/${{ env.BINARY_NAME }} dist/${{ env.BINARY_NAME }}.zip
+          xcrun notarytool submit dist/${{ env.BINARY_NAME }}.zip \
+            --apple-id  "$AC_USERNAME" \
+            --password  "$AC_PASSWORD" \
+            --team-id   "$AC_TEAM_ID" \
+            --wait
+          xcrun stapler staple dist/${{ env.BINARY_NAME }}
+          rm dist/${{ env.BINARY_NAME }}.zip
+
+      # ── package tarballs ─────────────────────────────────────────────────
+      - name: Package release assets
+        run: |
+          VERSION="${GITHUB_REF_NAME}"   # e.g. v0.2.0
+          cd dist
+
+          # Universal tarball
+          tar czf ${{ env.BINARY_NAME }}-${VERSION}-universal-apple-darwin.tar.gz \
+            ${{ env.BINARY_NAME }}
+
+          # Arch-specific tarballs
+          for ARCH in arm64 x86_64; do
+            cp ../bins/${ARCH}/${{ env.BINARY_NAME }} \
+               ${{ env.BINARY_NAME }}-${ARCH}-tmp
+            TRIPLE=$([ "$ARCH" = "arm64" ] && echo "aarch64" || echo "x86_64")
+            tar czf ${{ env.BINARY_NAME }}-${VERSION}-${TRIPLE}-apple-darwin.tar.gz \
+               ${{ env.BINARY_NAME }}-${ARCH}-tmp
+            rm ${{ env.BINARY_NAME }}-${ARCH}-tmp
+          done
+
+          # SHA-256 checksums
+          shasum -a 256 *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Upload universal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: dist/
+          retention-days: 7
+
+  # ── 3. Create GitHub Release ───────────────────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: universal
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist/
+
+      - name: Build release notes
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          echo "See [README](README.md) for full documentation." > release_notes.md
+          echo "" >> release_notes.md
+          echo "**Version:** ${VERSION}" >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Hush ${{ github.ref_name }}"
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}   # v1.0.0-gamma → prerelease
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: false
+
+  # ── 4. Update Homebrew tap ─────────────────────────────────────────────────
+  homebrew:
+    name: Update Homebrew Tap
+    needs: release
+    runs-on: ubuntu-latest
+    # Only update tap for stable releases (no pre-release suffix)
+    if: ${{ !contains(github.ref_name, '-') }}
+
+    steps:
+      - name: Dispatch tap update
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN not set — skipping Homebrew tap update"
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Trigger a repository_dispatch event on the homebrew-hush tap repo.
+          # The tap repo should have a workflow that listens for this event
+          # and bumps the formula version + sha256 automatically.
+          curl -sX POST \
+            -H "Authorization: token $TAP_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/hush-tool/homebrew-hush/dispatches" \
+            -d "{\"event_type\":\"release\",\"client_payload\":{\"version\":\"${VERSION}\",\"tag\":\"${GITHUB_REF_NAME}\"}}"
+          echo "✓  Homebrew tap update dispatched for v${VERSION}"

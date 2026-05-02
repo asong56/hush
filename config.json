@@ -1,0 +1,590 @@
+{
+  "schema_version": 1,
+  "schedule": {
+    "boot_clean": true,
+    "cache_sweep_interval_hours": 24,
+    "app_audit_interval_days": 7,
+    "snapshot_audit_interval_days": 3
+  },
+  "thresholds": {
+    "cache_unused_days": 7,
+    "uninstall_unused_days": 365,
+    "snapshot_max_age_days": 7,
+    "snapshot_keep_count": 2,
+    "large_file_min_mb": 100,
+    "log_max_age_days": 30,
+    "tmp_max_age_hours": 24,
+    "timemachine_incomplete_safe_hours": 24
+  },
+  "paths": {
+    "system_cache": [
+      "/Library/Caches"
+    ],
+    "user_cache": [
+      "~/Library/Caches"
+    ],
+    "crash_logs": [
+      "~/Library/Logs/DiagnosticReports",
+      "/Library/Logs/DiagnosticReports",
+      "/private/var/db/diagnostics"
+    ],
+    "tmp_dirs": [
+      "/private/tmp",
+      "/private/var/tmp"
+    ],
+    "app_containers": [
+      "~/Library/Containers"
+    ],
+    "app_support": [
+      "~/Library/Application Support"
+    ],
+    "app_prefs": [
+      "~/Library/Preferences"
+    ],
+    "system_logs": [
+      "/private/var/log",
+      "/private/var/db/powerlog"
+    ]
+  },
+  "categories": {
+    "system": {
+      "enabled": true,
+      "targets": [
+        {
+          "name": "DS_Store",
+          "pattern": "**/.DS_Store",
+          "recursive": true
+        },
+        {
+          "name": "AppleDouble",
+          "pattern": "**/._*",
+          "recursive": true
+        },
+        {
+          "name": "CrashReports",
+          "ext": [
+            "crash",
+            "spin",
+            "hang",
+            "ips",
+            "diag"
+          ],
+          "recursive": false
+        },
+        {
+          "name": "DiagnosticPipeline",
+          "path": "/private/var/db/DiagnosticPipeline",
+          "max_age_days": 30
+        },
+        {
+          "name": "PowerLog",
+          "path": "/private/var/db/powerlog",
+          "max_age_days": 30
+        },
+        {
+          "name": "MemoryViolations",
+          "path": "/private/var/db/reportmemoryexception/MemoryLimitViolations",
+          "max_age_days": 30
+        }
+      ]
+    },
+    "dev_caches": {
+      "enabled": true,
+      "entries": [
+        {
+          "name": "Xcode DerivedData",
+          "path": "~/Library/Developer/Xcode/DerivedData",
+          "risk": "safe",
+          "group": "Xcode"
+        },
+        {
+          "name": "Xcode Archives",
+          "path": "~/Library/Developer/Xcode/Archives",
+          "risk": "caution",
+          "group": "Xcode"
+        },
+        {
+          "name": "Xcode Simulators",
+          "path": "~/Library/Developer/CoreSimulator/Devices",
+          "risk": "caution",
+          "group": "Xcode"
+        },
+        {
+          "name": "Xcode Device Support",
+          "path": "~/Library/Developer/Xcode/iOS DeviceSupport",
+          "risk": "safe",
+          "group": "Xcode"
+        },
+        {
+          "name": "Xcode Previews",
+          "path": "~/Library/Developer/Xcode/UserData/Previews",
+          "risk": "safe",
+          "group": "Xcode"
+        },
+        {
+          "name": "Simulator Caches",
+          "path": "~/Library/Developer/CoreSimulator/Caches",
+          "risk": "safe",
+          "group": "Xcode"
+        },
+        {
+          "name": "Swift PM Cache",
+          "path": "~/Library/Caches/org.swift.swiftpm",
+          "risk": "safe",
+          "group": "Xcode"
+        },
+        {
+          "name": "CocoaPods Cache",
+          "path": "~/Library/Caches/CocoaPods",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Homebrew Cache",
+          "path": "~/Library/Caches/Homebrew",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "npm Cache",
+          "path": "~/.npm/_cacache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Yarn Cache",
+          "path": "~/Library/Caches/Yarn",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "pnpm Store",
+          "path": "~/Library/pnpm/store",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Bun Cache",
+          "path": "~/.bun/install/cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Deno Cache",
+          "path": "~/Library/Caches/deno",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "pip Cache",
+          "path": "~/Library/Caches/pip",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "UV Cache",
+          "path": "~/.cache/uv",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Conda Packages",
+          "path": "~/.conda/pkgs",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Poetry Cache",
+          "path": "~/Library/Caches/pypoetry",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "pipenv Virtualenvs",
+          "path": "~/.local/share/virtualenvs",
+          "risk": "caution",
+          "group": null
+        },
+        {
+          "name": "Gradle Cache",
+          "path": "~/.gradle/caches",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Gradle Wrapper",
+          "path": "~/.gradle/wrapper/dists",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Maven Cache",
+          "path": "~/.m2/repository",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "SBT/Ivy Cache",
+          "path": "~/.ivy2/cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Bazel Cache",
+          "path": "~/.cache/bazel",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Android Emulators",
+          "path": "~/.android/avd",
+          "risk": "caution",
+          "group": null
+        },
+        {
+          "name": "Docker Data",
+          "path": "~/Library/Containers/com.docker.docker/Data",
+          "risk": "risky",
+          "group": null
+        },
+        {
+          "name": "Terraform Plugins",
+          "path": "~/.terraform.d",
+          "risk": "caution",
+          "group": null
+        },
+        {
+          "name": "Go Modules",
+          "path": "~/go/pkg/mod/cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Rust Cargo",
+          "path": "~/.cargo/registry",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Composer Cache",
+          "path": "~/.composer/cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Ruby Gems",
+          "path": "~/.gem",
+          "risk": "safe",
+          "group": "Ruby"
+        },
+        {
+          "name": "Bundler Cache",
+          "path": "~/.bundle/cache",
+          "risk": "safe",
+          "group": "Ruby"
+        },
+        {
+          "name": "rbenv Versions",
+          "path": "~/.rbenv/versions",
+          "risk": "caution",
+          "group": "Ruby"
+        },
+        {
+          "name": "Playwright Browsers",
+          "path": "~/Library/Caches/ms-playwright",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Puppeteer Browsers",
+          "path": "~/.cache/puppeteer",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "Flutter/Pub Cache",
+          "path": "~/.pub-cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "JetBrains Cache",
+          "path": "~/Library/Caches/JetBrains",
+          "risk": "safe",
+          "group": "IDE"
+        },
+        {
+          "name": "VS Code Cache",
+          "path": "~/Library/Caches/com.microsoft.VSCode",
+          "risk": "safe",
+          "group": "VSCode"
+        },
+        {
+          "name": "VS Code CachedData",
+          "path": "~/Library/Application Support/Code/CachedData",
+          "risk": "safe",
+          "group": "VSCode"
+        },
+        {
+          "name": "VS Code Ext Cache",
+          "path": "~/Library/Application Support/Code/CachedExtensionVSIXs",
+          "risk": "safe",
+          "group": "VSCode"
+        },
+        {
+          "name": "VS Code Logs",
+          "path": "~/Library/Application Support/Code/logs",
+          "risk": "safe",
+          "group": "VSCode"
+        },
+        {
+          "name": "HuggingFace Cache",
+          "path": "~/.cache/huggingface",
+          "risk": "caution",
+          "group": "AI"
+        },
+        {
+          "name": "Ollama Models",
+          "path": "~/.ollama/models",
+          "risk": "risky",
+          "group": "AI"
+        },
+        {
+          "name": "Unity Build Cache",
+          "path": "~/Library/Caches/Unity",
+          "risk": "safe",
+          "group": "GameDev"
+        },
+        {
+          "name": "Unity Logs",
+          "path": "~/Library/Logs/Unity",
+          "risk": "safe",
+          "group": "GameDev"
+        },
+        {
+          "name": "Godot Cache",
+          "path": "~/Library/Caches/Godot",
+          "risk": "safe",
+          "group": "GameDev"
+        },
+        {
+          "name": "AWS CLI Cache",
+          "path": "~/.aws/sso/cache",
+          "risk": "safe",
+          "group": null
+        },
+        {
+          "name": "nvm Node Versions",
+          "path": "~/.nvm/versions",
+          "risk": "caution",
+          "group": "VerMgr"
+        },
+        {
+          "name": "pyenv Versions",
+          "path": "~/.pyenv/versions",
+          "risk": "caution",
+          "group": "VerMgr"
+        },
+        {
+          "name": "mise Installs",
+          "path": "~/.local/share/mise/installs",
+          "risk": "caution",
+          "group": "VerMgr"
+        }
+      ]
+    },
+    "project_artifacts": {
+      "enabled": true,
+      "min_size_mb": 10,
+      "scan_roots": [
+        "~/Documents",
+        "~/Developer",
+        "~/Projects",
+        "~/Code",
+        "~/repos",
+        "~/src",
+        "~/workspace",
+        "~/Desktop"
+      ],
+      "types": [
+        {
+          "marker": "package.json",
+          "artifact": "node_modules",
+          "label": "Node.js"
+        },
+        {
+          "marker": "Cargo.toml",
+          "artifact": "target",
+          "label": "Rust"
+        },
+        {
+          "marker": "Package.swift",
+          "artifact": ".build",
+          "label": "Swift PM"
+        },
+        {
+          "marker": "go.mod",
+          "artifact": "vendor",
+          "label": "Go"
+        },
+        {
+          "marker": "build.gradle",
+          "artifact": "build",
+          "label": "Gradle"
+        },
+        {
+          "marker": "pom.xml",
+          "artifact": "target",
+          "label": "Maven"
+        },
+        {
+          "marker": "CMakeLists.txt",
+          "artifact": "build",
+          "label": "CMake"
+        },
+        {
+          "marker": "main.tf",
+          "artifact": ".terraform",
+          "label": "Terraform"
+        },
+        {
+          "marker": "Gemfile",
+          "artifact": "vendor/bundle",
+          "label": "Ruby"
+        },
+        {
+          "marker": "pubspec.yaml",
+          "artifact": ".dart_tool",
+          "label": "Flutter"
+        }
+      ]
+    },
+    "logs": {
+      "enabled": true,
+      "max_age_days": 30
+    }
+  },
+  "snapshots": {
+    "enabled": true,
+    "auto_delete": true,
+    "max_age_days": 7,
+    "keep_count": 2,
+    "skip_if_tm_running": true,
+    "delete_incomplete_backups": true,
+    "incomplete_safe_hours": 24
+  },
+  "silence": {
+    "enabled": true,
+    "block_notifications": true,
+    "block_background_agents": true,
+    "force_quit_on_window_close": true,
+    "notification_mode": "banners_only",
+    "per_app_overrides": {
+      "com.apple.iCal": {
+        "allow_notifications": true,
+        "allow_background": true
+      },
+      "com.apple.Reminders": {
+        "allow_notifications": true,
+        "allow_background": true
+      },
+      "com.apple.Mail": {
+        "allow_notifications": true,
+        "allow_background": true
+      },
+      "com.apple.FaceTime": {
+        "allow_notifications": true,
+        "allow_background": true
+      }
+    }
+  },
+  "optimizer": {
+    "enabled": true,
+    "flush_dns": true,
+    "quicklook_refresh": true,
+    "launch_services_rebuild": true,
+    "sqlite_vacuum": true,
+    "quarantine_cleanup": true,
+    "saved_state_cleanup": true,
+    "saved_state_max_age_days": 30,
+    "broken_launch_agents": true,
+    "notification_center_cleanup": true,
+    "coreduet_cleanup": true,
+    "font_cache_rebuild": false,
+    "dock_refresh": true,
+    "prevent_network_dsstore": true,
+    "purge_inactive_memory": false,
+    "disable_reopen_windows": true,
+    "disable_sudden_motion_sensor": true,
+    "increase_fd_limit": true,
+    "periodic_maintenance": true
+  },
+  "process_killer": {
+    "enabled": true,
+    "graceful_timeout_secs": 3,
+    "force_timeout_secs": 5,
+    "use_launchctl_bootout": true
+  },
+  "whitelist": {
+    "apps": [
+      "Finder",
+      "Dock",
+      "SystemUIServer",
+      "Spotlight",
+      "loginwindow",
+      "NotificationCenter",
+      "ControlCenter",
+      "SystemPreferences",
+      "System Settings"
+    ],
+    "bundle_ids": [
+      "com.apple.finder",
+      "com.apple.dock",
+      "com.apple.systemuiserver",
+      "com.apple.Spotlight",
+      "com.apple.loginwindow",
+      "com.apple.notificationcenterui",
+      "com.apple.controlcenter",
+      "com.apple.systempreferences",
+      "com.apple.SystemSettings",
+      "com.apple.security",
+      "com.apple.keychain",
+      "com.apple.trustd",
+      "com.apple.bird",
+      "com.apple.iCloud",
+      "org.cups"
+    ],
+    "paths": [
+      "~/Library/Preferences/com.apple.dock.plist",
+      "~/Library/Preferences/com.apple.finder.plist",
+      "~/Library/Preferences/.GlobalPreferences.plist",
+      "~/Library/Caches/com.apple.helpd"
+    ]
+  },
+  "rogue_list": {
+    "bundle_ids": [
+      "com.mackeeper.MacKeeper",
+      "com.avast.AVASTSECURITY",
+      "com.norton.Norton-Security",
+      "com.pcmag.MacBooster",
+      "com.iobit.iobituninstaller",
+      "com.climatechangeapp.MacAutoFixer",
+      "com.zeobit.MacKeeper"
+    ],
+    "app_names": [
+      "MacKeeper",
+      "MacBooster",
+      "Mac Auto Fixer",
+      "Avast Security",
+      "Norton Security",
+      "IObit Uninstaller"
+    ],
+    "process_names": [
+      "MacKeeper Helper",
+      "MacBooster Helper",
+      "Norton Commander",
+      "AvastUI",
+      "MacAutoFixerAgent"
+    ]
+  }
+}
